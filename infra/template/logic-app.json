@@ -1,0 +1,238 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "name": {
+        "type": "string",
+        "defaultValue": "logic-app-demo1",
+        "metadata": {
+          "description": "Name of the Logic App."
+        }
+      },
+      "logicAppLocation": {
+        "type": "string",
+        "defaultValue": "westus",
+        "allowedValues": [
+          "asia",
+          "asiapacific",
+          "australia",
+          "australiacentral",
+          "australiacentral2",
+          "australiaeast",
+          "australiasoutheast",
+          "brazil",
+          "brazilsouth",
+          "brazilsoutheast",
+          "canada",
+          "canadacentral",
+          "canadaeast",
+          "centralindia",
+          "centralus",
+          "centraluseuap",
+          "centralusstage",
+          "chinaeast",
+          "chinanorth",
+          "eastasia",
+          "eastasiastage",
+          "eastus",
+          "eastus2",
+          "eastus2euap",
+          "eastus2stage",
+          "eastusstage",
+          "europe",
+          "francecentral",
+          "francesouth",
+          "germanycentral",
+          "germanynorth",
+          "germanynortheast",
+          "germanywestcentral",
+          "global",
+          "india",
+          "japan",
+          "japaneast",
+          "japanwest",
+          "jioindiawest",
+          "koreacentral",
+          "koreasouth",
+          "northcentralus",
+          "northcentralusstage",
+          "northeurope",
+          "norwayeast",
+          "norwaywest",
+          "southafricanorth",
+          "southafricawest",
+          "southcentralus",
+          "southcentralusstage",
+          "southeastasia",
+          "southeastasiastage",
+          "southindia",
+          "switzerland",
+          "switzerlandnorth",
+          "switzerlandwest",
+          "uaecentral",
+          "uaenorth",
+          "uk",
+          "uksouth",
+          "ukwest",
+          "unitedstates",
+          "usdodeast",
+          "usdodwest",
+          "usgovarizona",
+          "usgoviowa",
+          "usgovtexas",
+          "usgovvirginia",
+          "usseceast",
+          "ussecwest",
+          "west",
+          "westcentralus",
+          "westeurope",
+          "westindia",
+          "westus",
+          "westus2",
+          "westus2stage",
+          "westus3",
+          "westusstage"
+        ],
+        "metadata": {
+          "description": "Location of the Logic App."
+        }
+      },
+      "github_name": {
+        "type": "string",
+        "defaultValue": "github"
+      },
+      "github_displayName": {
+        "type": "string",
+        "defaultValue": "asharma72"
+      },
+      "outlook_name": {
+        "type": "string",
+        "defaultValue": "outlook"
+      },
+      "outlook_displayName": {
+        "type": "string",
+        "defaultValue": "Outlook.com"
+      },
+
+      "deploy_timestamp": {
+        "type": "string"
+      }
+    },
+    "variables": {},
+    "resources": [
+      {
+        "type": "Microsoft.Logic/workflows",
+        "apiVersion": "2019-05-01",
+        "tags":{
+              "deploy_timestamp": "[parameters('deploy_timestamp')]"
+        },
+        "name": "[parameters('name')]",
+        "location": "[parameters('logicAppLocation')]",
+        "dependsOn": [
+          "[resourceId('Microsoft.Web/connections', parameters('github_name'))]",
+          "[resourceId('Microsoft.Web/connections', parameters('outlook_name'))]"
+        ],
+        "properties": {
+          "definition": {
+            "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+            "contentVersion": "1.0.0.0",
+            "parameters": {
+              "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+              }
+            },
+            "triggers": {
+              "When_a_pull_request_is_created_or_modified_2": {
+                "type": "ApiConnectionWebhook",
+                "inputs": {
+                  "body": {
+                    "active": true,
+                    "config": {
+                      "content_type": "json",
+                      "url": "@{listCallbackUrl()}"
+                    },
+                    "events": [
+                      "pull_request"
+                    ],
+                    "name": "web"
+                  },
+                  "headers": {
+                    "Accept": "application/vnd.github.v3+json"
+                  },
+                  "host": {
+                    "connection": {
+                      "name": "@parameters('$connections')['github']['connectionId']"
+                    }
+                  },
+                  "path": "/repos/@{encodeURIComponent('asharma72')}/@{encodeURIComponent('logic-app-demo')}/hooks"
+                }
+              }
+            },
+            "actions": {
+              "Send_an_email_(V2)": {
+                "runAfter": {},
+                "type": "ApiConnection",
+                "inputs": {
+                  "body": {
+                    "Body": "<p>@{triggerBody()}</p>",
+                    "Subject": "log-app-test",
+                    "To": "ag.sharma23@hotmail.com"
+                  },
+                  "host": {
+                    "connection": {
+                      "name": "@parameters('$connections')['outlook']['connectionId']"
+                    }
+                  },
+                  "method": "post",
+                  "path": "/v2/Mail"
+                }
+              }
+            },
+            "outputs": {}
+          },
+          "parameters": {
+            "$connections": {
+              "value": {
+                "github": {
+                  "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/',parameters('logicAppLocation'),'/managedApis/github')]",
+                  "connectionId": "[resourceId('Microsoft.Web/connections', parameters('github_name'))]",
+                  "connectionName": "[parameters('github_name')]"
+                },
+                "outlook": {
+                  "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/',parameters('logicAppLocation'),'/managedApis/outlook')]",
+                  "connectionId": "[resourceId('Microsoft.Web/connections', parameters('outlook_name'))]",
+                  "connectionName": "[parameters('outlook_name')]"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "Microsoft.Web/connections",
+        "apiVersion": "2016-06-01",
+        "location": "[parameters('logicAppLocation')]",
+        "name": "[parameters('outlook_name')]",
+        "properties": {
+          "api": {
+            "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/',parameters('logicAppLocation'),'/managedApis/outlook')]"
+          },
+          "displayName": "[parameters('outlook_displayName')]"
+        }
+      },
+      {
+        "type": "Microsoft.Web/connections",
+        "apiVersion": "2016-06-01",
+        "location": "[parameters('logicAppLocation')]",
+        "name": "[parameters('github_name')]",
+        "properties": {
+          "api": {
+            "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/',parameters('logicAppLocation'),'/managedApis/github')]"
+          },
+          "displayName": "[parameters('github_displayName')]"
+        }
+      }
+    ],
+    "outputs": {}
+  }
